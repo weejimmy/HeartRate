@@ -16,7 +16,8 @@
     currentDayData: null,   // Detail JSON for currentDate
     currentHour: 14,        // 0..23
     currentView: 'monthly', // 'monthly' | 'daily' | 'minute'
-    monthSubView: 'calendar', // 'calendar' | 'chart'
+    monthSubView: 'calendar', // 'calendar' | 'list' | 'chart'
+    dayListFilter: 'all',    // 'all' | 'flagged'
     minuteFilter: 'all',    // 'all' | 'flagged' | 'high' | 'low'
     thresholds: {
       low: 60,
@@ -38,7 +39,7 @@
 
     try {
       showLoading(true);
-      const res = await fetch('/data/summary.json');
+      const res = await fetch('./data/summary.json');
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       state.summary = await res.json();
 
@@ -49,9 +50,14 @@
       state.currentMonth = availableMonths.includes('2026-08') ? '2026-08' : availableMonths[0];
       el.monthDropdown.value = state.currentMonth;
 
+      // On mobile screens <= 640px, default to 'list' view for best legibility
+      if (window.innerWidth <= 640) {
+        state.monthSubView = 'list';
+      }
+
       updateThresholdIndicators();
       computeMonthAnomalies();
-      renderMonthlyView();
+      setMonthSubView(state.monthSubView);
       showLoading(false);
     } catch (err) {
       console.error('Failed to load heart rate summary:', err);
@@ -84,9 +90,15 @@
 
     // Monthly View elements
     el.btnToggleCalendar = document.getElementById('btn-toggle-calendar');
+    el.btnToggleDayList = document.getElementById('btn-toggle-day-list');
     el.btnToggleMonthChart = document.getElementById('btn-toggle-month-chart');
     el.calendarViewContainer = document.getElementById('calendar-view-container');
+    el.dayListViewContainer = document.getElementById('day-list-view-container');
     el.monthChartContainer = document.getElementById('month-chart-container');
+    el.dayListMonthTitle = document.getElementById('day-list-month-title');
+    el.monthlyDayListItems = document.getElementById('monthly-day-list-items');
+    el.filterDaylistAll = document.getElementById('filter-daylist-all');
+    el.filterDaylistFlagged = document.getElementById('filter-daylist-flagged');
     el.monthKpiMin = document.getElementById('month-kpi-min');
     el.monthKpiMinDate = document.getElementById('month-kpi-min-date');
     el.monthKpiAvg = document.getElementById('month-kpi-avg');
@@ -191,22 +203,18 @@
     el.crumbMinute.addEventListener('click', () => showView('minute'));
 
     // View sub-toggles
-    el.btnToggleCalendar.addEventListener('click', () => {
-      state.monthSubView = 'calendar';
-      el.btnToggleCalendar.classList.add('active');
-      el.btnToggleMonthChart.classList.remove('active');
-      el.calendarViewContainer.style.display = 'flex';
-      el.monthChartContainer.style.display = 'none';
-    });
+    el.btnToggleCalendar.addEventListener('click', () => setMonthSubView('calendar'));
+    if (el.btnToggleDayList) {
+      el.btnToggleDayList.addEventListener('click', () => setMonthSubView('list'));
+    }
+    el.btnToggleMonthChart.addEventListener('click', () => setMonthSubView('chart'));
 
-    el.btnToggleMonthChart.addEventListener('click', () => {
-      state.monthSubView = 'chart';
-      el.btnToggleMonthChart.classList.add('active');
-      el.btnToggleCalendar.classList.remove('active');
-      el.calendarViewContainer.style.display = 'none';
-      el.monthChartContainer.style.display = 'flex';
-      renderMonthTrendChart();
-    });
+    if (el.filterDaylistAll) {
+      el.filterDaylistAll.addEventListener('click', () => setDayListFilter('all'));
+    }
+    if (el.filterDaylistFlagged) {
+      el.filterDaylistFlagged.addEventListener('click', () => setDayListFilter('flagged'));
+    }
 
     // Day View controls
     el.btnBackToMonth.addEventListener('click', () => showView('monthly'));
@@ -434,13 +442,137 @@
     el.monthKpiFlags.textContent = flaggedDaysCount;
     el.monthKpiFlagBreakdown.textContent = `${totalHighFlags} High | ${totalLowFlags} Low events`;
 
-    // Render Calendar Grid
-    renderCalendarGrid(monthObj);
-
-    // If chart view is active, render canvas
-    if (state.monthSubView === 'chart') {
+    // Render appropriate sub-view
+    if (state.monthSubView === 'calendar') {
+      renderCalendarGrid(monthObj);
+    } else if (state.monthSubView === 'list') {
+      renderDayListView(monthObj);
+    } else if (state.monthSubView === 'chart') {
       renderMonthTrendChart();
     }
+  }
+
+  function setMonthSubView(subView) {
+    state.monthSubView = subView;
+    if (el.btnToggleCalendar) el.btnToggleCalendar.classList.toggle('active', subView === 'calendar');
+    if (el.btnToggleDayList) el.btnToggleDayList.classList.toggle('active', subView === 'list');
+    if (el.btnToggleMonthChart) el.btnToggleMonthChart.classList.toggle('active', subView === 'chart');
+
+    if (el.calendarViewContainer) el.calendarViewContainer.style.display = subView === 'calendar' ? 'flex' : 'none';
+    if (el.dayListViewContainer) el.dayListViewContainer.style.display = subView === 'list' ? 'flex' : 'none';
+    if (el.monthChartContainer) el.monthChartContainer.style.display = subView === 'chart' ? 'flex' : 'none';
+
+    renderMonthlyView();
+  }
+
+  function setDayListFilter(filter) {
+    state.dayListFilter = filter;
+    if (el.filterDaylistAll) el.filterDaylistAll.classList.toggle('active', filter === 'all');
+    if (el.filterDaylistFlagged) el.filterDaylistFlagged.classList.toggle('active', filter === 'flagged');
+    const monthObj = getCurrentMonthObj();
+    if (monthObj) renderDayListView(monthObj);
+  }
+
+  function renderDayListView(monthObj) {
+    if (!el.monthlyDayListItems) return;
+    el.monthlyDayListItems.innerHTML = '';
+    if (el.dayListMonthTitle) {
+      el.dayListMonthTitle.textContent = `${monthObj.label} — Day-by-Day Feed`;
+    }
+
+    let daysToRender = monthObj.days.slice().sort((a, b) => a.date.localeCompare(b.date));
+
+    if (state.dayListFilter === 'flagged') {
+      daysToRender = daysToRender.filter(d => d.max > state.thresholds.high || d.min < state.thresholds.low);
+    }
+
+    if (daysToRender.length === 0) {
+      el.monthlyDayListItems.innerHTML = `
+        <div class="day-list-empty">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          <h4>No Flagged Days in ${monthObj.label}</h4>
+          <p>All recorded days in this month are within your active threshold boundaries (${state.thresholds.low} – ${state.thresholds.high} BPM).</p>
+        </div>
+      `;
+      return;
+    }
+
+    daysToRender.forEach(d => {
+      const isHighFlag = d.max > state.thresholds.high;
+      const isLowFlag = d.min < state.thresholds.low;
+
+      // Range Bar calculation
+      const minBound = 40;
+      const maxBound = 170;
+      const clampedMin = Math.max(minBound, Math.min(maxBound, d.min));
+      const clampedMax = Math.max(minBound, Math.min(maxBound, d.max));
+      const leftPct = ((clampedMin - minBound) / (maxBound - minBound)) * 100;
+      const widthPct = Math.max(4, ((clampedMax - clampedMin) / (maxBound - minBound)) * 100);
+
+      // Date formatting
+      const dateParts = d.date.split('-');
+      const dObj = new Date(parseInt(dateParts[0], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[2], 10));
+      const weekday = dObj.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayFormatted = dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      // Badges
+      let badgesHtml = '';
+      if (isHighFlag) {
+        badgesHtml += `<span class="day-card-badge badge-high">⚡ High: ${d.max} BPM</span>`;
+      }
+      if (isLowFlag) {
+        badgesHtml += `<span class="day-card-badge badge-low">❄ Low: ${d.min} BPM</span>`;
+      }
+      if (!isHighFlag && !isLowFlag) {
+        badgesHtml += `<span class="day-card-badge badge-normal">✓ In Range</span>`;
+      }
+
+      const card = document.createElement('div');
+      card.className = `day-list-card ${isHighFlag ? 'has-high-flag' : ''} ${isLowFlag ? 'has-low-flag' : ''}`;
+      card.innerHTML = `
+        <div class="day-card-top">
+          <div class="day-card-date-wrap">
+            <span class="day-card-weekday">${weekday}</span>
+            <span class="day-card-date">${dayFormatted}</span>
+          </div>
+          <div class="day-card-badges">
+            ${badgesHtml}
+          </div>
+        </div>
+
+        <div class="day-card-metrics-grid">
+          <div class="day-card-metric card-metric-min">
+            <span class="metric-label">Lowest</span>
+            <span class="metric-value ${isLowFlag ? 'val-low' : ''}">${d.min} <small>BPM</small></span>
+          </div>
+          <div class="day-card-metric card-metric-avg">
+            <span class="metric-label">Daily Average</span>
+            <span class="metric-value val-avg">${d.avg} <small>BPM</small></span>
+          </div>
+          <div class="day-card-metric card-metric-max">
+            <span class="metric-label">Peak</span>
+            <span class="metric-value ${isHighFlag ? 'val-high' : ''}">${d.max} <small>BPM</small></span>
+          </div>
+        </div>
+
+        <div class="day-card-range-section">
+          <div class="day-card-range-labels">
+            <span>Range: ${d.min} – ${d.max} BPM</span>
+            <span>${d.count ? (d.count).toLocaleString() + ' readings' : ''}</span>
+          </div>
+          <div class="cal-range-bar-wrapper" style="height: 6px;">
+            <div class="cal-range-fill" style="left:${leftPct}%; width:${widthPct}%;"></div>
+          </div>
+        </div>
+
+        <div class="day-card-footer">
+          <span class="day-card-cta">View 24h Hourly Breakdown &rarr;</span>
+        </div>
+      `;
+
+      card.addEventListener('click', () => drillToDay(d.date));
+      el.monthlyDayListItems.appendChild(card);
+    });
   }
 
   function renderCalendarGrid(monthObj) {
@@ -475,7 +607,11 @@
 
       if (!dayData) {
         cell.classList.add('empty');
-        cell.innerHTML = `<div class="cal-day-head"><span class="cal-day-num">${dayNum}</span></div><div class="cal-metrics-row"><span style="color:var(--text-muted);font-size:0.75rem;">No data</span></div>`;
+        cell.innerHTML = `
+          <div class="cal-day-head"><span class="cal-day-num">${dayNum}</span></div>
+          <div class="cal-metrics-row cal-desktop-metrics"><span style="color:var(--text-muted);font-size:0.75rem;">No data</span></div>
+          <div class="cal-mobile-metrics"><span class="cal-mobile-no-data">--</span></div>
+        `;
         el.monthlyCalendarDays.appendChild(cell);
         continue;
       }
@@ -495,17 +631,26 @@
       const leftPct = ((clampedMin - minBound) / (maxBound - minBound)) * 100;
       const widthPct = Math.max(4, ((clampedMax - clampedMin) / (maxBound - minBound)) * 100);
 
-      // Pills
+      // Full text pills for desktop, glowing alert dots for mobile
       let pillsHtml = '';
-      if (isHighFlag) pillsHtml += `<span class="cal-pill cal-pill-high" title="Peak exceeds ${state.thresholds.high} BPM">⚡ High</span>`;
-      if (isLowFlag) pillsHtml += `<span class="cal-pill cal-pill-low" title="Dip below ${state.thresholds.low} BPM">❄ Low</span>`;
+      let dotsHtml = '';
+      if (isHighFlag) {
+        pillsHtml += `<span class="cal-pill cal-pill-high" title="Peak exceeds ${state.thresholds.high} BPM">⚡ High</span>`;
+        dotsHtml += `<span class="cal-dot dot-high" title="High: ${dayData.max} BPM"></span>`;
+      }
+      if (isLowFlag) {
+        pillsHtml += `<span class="cal-pill cal-pill-low" title="Dip below ${state.thresholds.low} BPM">❄ Low</span>`;
+        dotsHtml += `<span class="cal-dot dot-low" title="Low: ${dayData.min} BPM"></span>`;
+      }
 
       cell.innerHTML = `
         <div class="cal-day-head">
           <span class="cal-day-num">${dayNum}</span>
           <div class="cal-flag-pills">${pillsHtml}</div>
+          <div class="cal-flag-dots">${dotsHtml}</div>
         </div>
-        <div class="cal-metrics-row">
+        <!-- Desktop Metrics (Shown on >= 769px) -->
+        <div class="cal-metrics-row cal-desktop-metrics">
           <div class="cal-metric-item">
             <span class="cal-metric-label">Min</span>
             <span class="cal-metric-value ${isLowFlag ? 'val-low' : ''}">${dayData.min} <small>BPM</small></span>
@@ -518,9 +663,18 @@
             <span class="cal-metric-label">Max</span>
             <span class="cal-metric-value ${isHighFlag ? 'val-high' : ''}">${dayData.max} <small>BPM</small></span>
           </div>
-          <div class="cal-range-bar-wrapper" title="Range: ${dayData.min} to ${dayData.max} BPM">
-            <div class="cal-range-fill" style="left:${leftPct}%; width:${widthPct}%;"></div>
+        </div>
+        <!-- Mobile Metrics (Clean, legible, zero text overlap) -->
+        <div class="cal-mobile-metrics">
+          <div class="cal-mobile-avg ${isHighFlag ? 'val-high' : isLowFlag ? 'val-low' : 'val-avg'}">
+            ${Math.round(dayData.avg)}<span class="cal-mobile-unit">bpm</span>
           </div>
+          <div class="cal-mobile-range">
+            <span class="${isLowFlag ? 'val-low' : ''}">${dayData.min}</span>·<span class="${isHighFlag ? 'val-high' : ''}">${dayData.max}</span>
+          </div>
+        </div>
+        <div class="cal-range-bar-wrapper" title="Range: ${dayData.min} to ${dayData.max} BPM">
+          <div class="cal-range-fill" style="left:${leftPct}%; width:${widthPct}%;"></div>
         </div>
         <div class="cal-day-action-hint">Drilldown &rarr;</div>
       `;
