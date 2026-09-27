@@ -1,15 +1,16 @@
 # ❤️ CardioPulse - Heart Rate Web Interface
 
-An interactive, responsive web-based analytics dashboard built to explore continuous heart rate telemetry across multiple granularities: **Monthly**, **Daily (Hourly)**, and **Minute-by-Minute (Sub-minute samples)**, featuring real-time clinical anomaly detection and flagging.
+An interactive, responsive web-based analytics dashboard built to explore continuous heart rate telemetry *from Google Health* across multiple granularities: **Monthly**, **Daily (Hourly)**, and **Minute-by-Minute (Sub-minute samples)**.
+
+This was whipped up very quickly so a bunch of features are missing e.g. saving your threshold preferences. It's not a medical device, it's just something to help visualise existing data. Draw your own conclusions from it.
 
 ---
 
 ## 🚀 Quick Start
 
-The server is already running! You can open your browser directly at:
-```
-http://localhost:3000
-```
+You'll need to grab your Google Health heartrate data and place the heart_rate-*.json files in the data folder.
+
+The easiest way to do that is to go to takeout.google.com and export your Google Health data from there. You'll get a big zip file - open it, and go into the Google Health -> Global Export Data folder. In there you'll find a bunch of .json files prepended with heart_rate. Copy them into the data folder in this repo.
 
 ### Running or Restarting the Server
 To start or run the server at any time:
@@ -20,6 +21,8 @@ Or:
 ```bash
 node server.js
 ```
+
+Server should be running at http://localhost:3000.
 
 ### Re-processing Data
 If you add more `.json` files to the `data/` directory, update the aggregated index with:
