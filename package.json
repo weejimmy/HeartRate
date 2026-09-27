@@ -1,0 +1,14 @@
+{
+  "name": "heart-rate-visualizer",
+  "version": "1.0.0",
+  "description": "Interactive Web Dashboard for Heart Rate Data with Monthly, Daily, and Minute drilldowns and automatic anomaly flagging",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "preprocess": "node scripts/preprocess.js"
+  },
+  "keywords": ["heart-rate", "health", "analytics", "dashboard", "visualization"],
+  "author": "Antigravity",
+  "license": "MIT"
+}

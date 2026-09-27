@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CardioPulse | Heart Rate Intelligence & Analytics</title>
+  <meta name="description" content="Interactive heart rate dashboard with monthly calendar views, hourly breakdowns, minute-level precision, and real-time clinical anomaly flagging.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f43f5e'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>">
+</head>
+<body class="theme-dark">
+  <div class="app-layout">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav" id="main-header">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg class="pulse-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            <path d="M3.22 12H7l2.5-5 3.5 10 2.5-6 1.5 2h3.78" stroke="url(#pulseGrad)" stroke-width="2.5"/>
+            <defs>
+              <linearGradient id="pulseGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#06b6d4" />
+                <stop offset="50%" stop-color="#f43f5e" />
+                <stop offset="100%" stop-color="#a855f7" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">CardioPulse <span class="badge-pro">Live</span></h1>
+          <span class="brand-subtitle">Heart Rate Analytics Engine</span>
+        </div>
+      </div>
+
+      <!-- Navigation Breadcrumb -->
+      <nav class="breadcrumb-container" id="breadcrumb-nav" aria-label="Breadcrumb navigation">
+        <button class="crumb-btn active" id="crumb-month" aria-current="page">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span id="crumb-month-label">Monthly View</span>
+        </button>
+        <span class="crumb-sep" id="crumb-sep-1" style="display:none;">/</span>
+        <button class="crumb-btn" id="crumb-day" style="display:none;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="crumb-day-label">Daily View</span>
+        </button>
+        <span class="crumb-sep" id="crumb-sep-2" style="display:none;">/</span>
+        <button class="crumb-btn" id="crumb-minute" style="display:none;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span id="crumb-minute-label">Minute View</span>
+        </button>
+      </nav>
+
+      <!-- Right Header Actions -->
+      <div class="nav-actions">
+        <!-- Month Selector Controls -->
+        <div class="month-selector-wrapper" id="month-nav-controls">
+          <button class="nav-icon-btn" id="btn-prev-month" title="Previous Month" aria-label="Previous Month">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="custom-select-container">
+            <select id="month-dropdown" aria-label="Select Month">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+          <button class="nav-icon-btn" id="btn-next-month" title="Next Month" aria-label="Next Month">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <!-- Anomaly Thresholds Trigger Button -->
+        <button class="action-btn pill-btn" id="btn-open-thresholds" title="Configure Alert Thresholds">
+          <span class="threshold-pill-indicator">
+            <span class="dot-indicator dot-low"></span>
+            <span id="label-low-threshold">&lt; 60</span>
+            <span class="threshold-sep">|</span>
+            <span class="dot-indicator dot-high"></span>
+            <span id="label-high-threshold">&gt; 100</span>
+          </span>
+          <span class="btn-text">Thresholds</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+
+        <!-- Flagged Anomalies Drawer Trigger -->
+        <button class="action-btn flag-btn" id="btn-open-anomalies" title="View Flagged Episodes">
+          <svg class="alert-bell-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span>Flagged</span>
+          <span class="flag-badge-count" id="total-flag-counter">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content" id="main-content-area">
+
+      <!-- ========================================================================= -->
+      <!-- VIEW 1: MONTHLY VIEW -->
+      <!-- ========================================================================= -->
+      <section class="dashboard-view active-view" id="view-monthly" aria-labelledby="monthly-heading">
+        <!-- Month Summary Banner -->
+        <div class="view-header-strip">
+          <div class="strip-titles">
+            <h2 class="view-title" id="monthly-heading">Monthly Heart Rate Overview</h2>
+            <p class="view-description">Daily Min, Average, and Max heart rates with automated clinical threshold screening.</p>
+          </div>
+          <div class="view-toggle-group">
+            <button class="toggle-pill active" id="btn-toggle-calendar" title="Calendar Grid View">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>Calendar</span>
+            </button>
+            <button class="toggle-pill" id="btn-toggle-month-chart" title="Monthly Trend Range Chart">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span>Trend Range</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Month KPI Stats Cards -->
+        <div class="kpi-grid" id="monthly-kpis">
+          <div class="kpi-card card-cyan">
+            <div class="kpi-header">
+              <span class="kpi-label">Lowest Heart Rate</span>
+              <span class="kpi-icon-badge icon-low">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="month-kpi-min">--</span> <span class="kpi-unit">BPM</span></div>
+              <div class="kpi-subtext" id="month-kpi-min-date">Detected on --</div>
+            </div>
+            <div class="kpi-foot" id="month-kpi-low-status">
+              <span class="badge-indicator badge-low">Bradycardia Range</span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-purple">
+            <div class="kpi-header">
+              <span class="kpi-label">Monthly Average</span>
+              <span class="kpi-icon-badge icon-avg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="month-kpi-avg">--</span> <span class="kpi-unit">BPM</span></div>
+              <div class="kpi-subtext" id="month-kpi-readings-count">Based on -- readings</div>
+            </div>
+            <div class="kpi-foot">
+              <span class="badge-indicator badge-normal">Standard Resting Zone</span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-rose">
+            <div class="kpi-header">
+              <span class="kpi-label">Peak Heart Rate</span>
+              <span class="kpi-icon-badge icon-high">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="month-kpi-max">--</span> <span class="kpi-unit">BPM</span></div>
+              <div class="kpi-subtext" id="month-kpi-max-date">Detected on --</div>
+            </div>
+            <div class="kpi-foot" id="month-kpi-high-status">
+              <span class="badge-indicator badge-high">Tachycardia Alert</span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-amber">
+            <div class="kpi-header">
+              <span class="kpi-label">Flagged Episodes</span>
+              <span class="kpi-icon-badge icon-warn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="month-kpi-flags">--</span> <span class="kpi-unit">Days</span></div>
+              <div class="kpi-subtext" id="month-kpi-flag-breakdown">-- High | -- Low</div>
+            </div>
+            <div class="kpi-foot">
+              <button class="link-btn" id="btn-view-month-flags">Inspect Anomalies &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Calendar View -->
+        <div class="card-surface" id="calendar-view-container">
+          <div class="card-header-bar">
+            <div class="header-left">
+              <h3 class="card-title" id="calendar-month-title">Monthly Calendar Breakdown</h3>
+              <span class="card-subtitle">Click any day to drill down into hourly logs</span>
+            </div>
+            <div class="legend-bar">
+              <span class="legend-item"><span class="legend-color color-low"></span> Low &lt; <span class="legend-low-val">60</span></span>
+              <span class="legend-item"><span class="legend-color color-normal"></span> Normal 60-100</span>
+              <span class="legend-item"><span class="legend-color color-high"></span> High &gt; <span class="legend-high-val">100</span></span>
+            </div>
+          </div>
+
+          <!-- Weekday Headers -->
+          <div class="calendar-grid-header">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+
+          <!-- Calendar Days Grid -->
+          <div class="calendar-grid" id="monthly-calendar-days">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Monthly Trend Chart View (Alternative / Complementary) -->
+        <div class="card-surface" id="month-chart-container" style="display: none;">
+          <div class="card-header-bar">
+            <div>
+              <h3 class="card-title">Daily Heart Rate Envelope (Min – Avg – Max)</h3>
+              <span class="card-subtitle">Full-month span showing day-to-day fluctuations and threshold breaches</span>
+            </div>
+            <div class="chart-controls">
+              <span class="badge-tip">Hover for values &bull; Click to drill into day</span>
+            </div>
+          </div>
+          <div class="chart-canvas-wrapper" style="height: 380px;">
+            <canvas id="canvas-month-trend"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- VIEW 2: DAILY VIEW (BROKEN DOWN BY HOUR) -->
+      <!-- ========================================================================= -->
+      <section class="dashboard-view" id="view-daily" aria-labelledby="daily-heading" style="display: none;">
+        <!-- Day Navigation Header -->
+        <div class="view-header-strip">
+          <div class="strip-left-controls">
+            <button class="back-btn" id="btn-back-to-month" title="Return to Monthly Overview">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              <span>Back to Month</span>
+            </button>
+            <div class="strip-titles">
+              <h2 class="view-title" id="daily-heading">Tuesday, July 21, 2026</h2>
+              <p class="view-description">Hourly analysis (00:00 to 23:00) with heart rate envelopes and flagged readings.</p>
+            </div>
+          </div>
+          <div class="day-stepper-group">
+            <button class="nav-step-btn" id="btn-prev-day" title="Previous Day">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              <span id="label-prev-day">Prev</span>
+            </button>
+            <button class="nav-step-btn" id="btn-next-day" title="Next Day">
+              <span id="label-next-day">Next</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Day KPI Cards -->
+        <div class="kpi-grid" id="day-kpis">
+          <div class="kpi-card card-cyan">
+            <div class="kpi-header">
+              <span class="kpi-label">Day Min Heart Rate</span>
+              <span class="kpi-icon-badge icon-low">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 13 12 18 17 13"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="day-kpi-min">--</span> <span class="kpi-unit">BPM</span></div>
+              <div class="kpi-subtext" id="day-kpi-min-time">Time: --:--:--</div>
+            </div>
+            <div class="kpi-foot" id="day-kpi-min-status">
+              <span class="badge-indicator badge-low">Low Alert</span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-purple">
+            <div class="kpi-header">
+              <span class="kpi-label">Day Average</span>
+              <span class="kpi-icon-badge icon-avg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="day-kpi-avg">--</span> <span class="kpi-unit">BPM</span></div>
+              <div class="kpi-subtext" id="day-kpi-total-points">-- sensor readings</div>
+            </div>
+            <div class="kpi-foot">
+              <span class="badge-indicator badge-normal">24h Continuous Monitored</span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-rose">
+            <div class="kpi-header">
+              <span class="kpi-label">Day Peak Heart Rate</span>
+              <span class="kpi-icon-badge icon-high">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 11 12 6 7 11"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="day-kpi-max">--</span> <span class="kpi-unit">BPM</span></div>
+              <div class="kpi-subtext" id="day-kpi-max-time">Time: --:--:--</div>
+            </div>
+            <div class="kpi-foot" id="day-kpi-max-status">
+              <span class="badge-indicator badge-high">High Alert</span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-amber">
+            <div class="kpi-header">
+              <span class="kpi-label">Hourly Flags Detected</span>
+              <span class="kpi-icon-badge icon-warn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="day-kpi-flag-count">--</span> <span class="kpi-unit">Hours</span></div>
+              <div class="kpi-subtext" id="day-kpi-flags-breakdown">-- Readings &gt; 100 &bull; -- Readings &lt; 60</div>
+            </div>
+            <div class="kpi-foot">
+              <span class="badge-indicator badge-warn">Automatic Screening Active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 24-Hour Timeline Chart Card -->
+        <div class="card-surface">
+          <div class="card-header-bar">
+            <div>
+              <h3 class="card-title">24-Hour Timeline Profile</h3>
+              <span class="card-subtitle">Min, Average, and Max range for every hour &bull; Click any hour to drill into minute details</span>
+            </div>
+            <div class="chart-legend-row">
+              <span class="legend-item"><span class="legend-color color-range"></span> Hourly Range (Min-Max)</span>
+              <span class="legend-item"><span class="legend-color color-avg-line"></span> Hourly Average</span>
+              <span class="legend-item"><span class="legend-color color-dash-high"></span> High Threshold</span>
+              <span class="legend-item"><span class="legend-color color-dash-low"></span> Low Threshold</span>
+            </div>
+          </div>
+          <div class="chart-canvas-wrapper" style="height: 340px;">
+            <canvas id="canvas-day-hourly"></canvas>
+          </div>
+        </div>
+
+        <!-- Hourly Breakdown Grid -->
+        <div class="card-surface">
+          <div class="card-header-bar">
+            <div>
+              <h3 class="card-title">Hourly Breakdown &amp; Minute Drilldown</h3>
+              <span class="card-subtitle">Select any hour block below to view minute-by-minute fluctuations</span>
+            </div>
+            <div class="filter-controls">
+              <label class="checkbox-container">
+                <input type="checkbox" id="chk-filter-flagged-hours">
+                <span class="checkmark"></span>
+                <span class="chk-label">Show only flagged hours</span>
+              </label>
+            </div>
+          </div>
+          <div class="hourly-cards-grid" id="hourly-cards-container">
+            <!-- 24 Hour Cards dynamically generated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- VIEW 3: MINUTE VIEW (BROKEN DOWN BY MINUTE) -->
+      <!-- ========================================================================= -->
+      <section class="dashboard-view" id="view-minute" aria-labelledby="minute-heading" style="display: none;">
+        <!-- Minute Navigation Header -->
+        <div class="view-header-strip">
+          <div class="strip-left-controls">
+            <button class="back-btn" id="btn-back-to-day" title="Return to Daily Overview">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              <span>Back to Day View</span>
+            </button>
+            <div class="strip-titles">
+              <h2 class="view-title" id="minute-heading">Hour 14:00 – 14:59 Precision Inspection</h2>
+              <p class="view-description" id="minute-subtitle">Minute-by-minute heart rate trace with sub-minute sensor point analysis.</p>
+            </div>
+          </div>
+          <div class="hour-stepper-group">
+            <button class="nav-step-btn" id="btn-prev-hour" title="Previous Hour">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+              <span>Prev Hour</span>
+            </button>
+            <div class="custom-select-container mini-select">
+              <select id="hour-quick-select" aria-label="Jump to hour">
+                <!-- 00:00 to 23:00 options -->
+              </select>
+            </div>
+            <button class="nav-step-btn" id="btn-next-hour" title="Next Hour">
+              <span>Next Hour</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Minute KPI Cards -->
+        <div class="kpi-grid" id="minute-kpis">
+          <div class="kpi-card card-cyan">
+            <div class="kpi-header">
+              <span class="kpi-label">Hour Low</span>
+              <span class="kpi-icon-badge icon-low">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 13 12 18 17 13"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="min-kpi-low">--</span> <span class="kpi-unit">BPM</span></div>
+              <div class="kpi-subtext" id="min-kpi-low-time">At --:--</div>
+            </div>
+            <div class="kpi-foot" id="min-kpi-low-status">
+              <span class="badge-indicator badge-low">Normal</span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-purple">
+            <div class="kpi-header">
+              <span class="kpi-label">Hour Average</span>
+              <span class="kpi-icon-badge icon-avg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="min-kpi-avg">--</span> <span class="kpi-unit">BPM</span></div>
+              <div class="kpi-subtext" id="min-kpi-count">-- readings logged</div>
+            </div>
+            <div class="kpi-foot">
+              <span class="badge-indicator badge-normal">Active Hour</span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-rose">
+            <div class="kpi-header">
+              <span class="kpi-label">Hour Peak</span>
+              <span class="kpi-icon-badge icon-high">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 11 12 6 7 11"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="min-kpi-high">--</span> <span class="kpi-unit">BPM</span></div>
+              <div class="kpi-subtext" id="min-kpi-high-time">At --:--</div>
+            </div>
+            <div class="kpi-foot" id="min-kpi-high-status">
+              <span class="badge-indicator badge-high">Normal</span>
+            </div>
+          </div>
+
+          <div class="kpi-card card-amber">
+            <div class="kpi-header">
+              <span class="kpi-label">Flagged Minutes</span>
+              <span class="kpi-icon-badge icon-warn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              </span>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-val"><span id="min-kpi-flags">--</span> <span class="kpi-unit">Mins</span></div>
+              <div class="kpi-subtext" id="min-kpi-flags-desc">Exceeding threshold</div>
+            </div>
+            <div class="kpi-foot">
+              <span class="badge-indicator badge-warn">Clinical Attention</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Minute-by-Minute Waveform Canvas Chart -->
+        <div class="card-surface">
+          <div class="card-header-bar">
+            <div>
+              <h3 class="card-title">Minute-by-Minute Continuous Waveform</h3>
+              <span class="card-subtitle">Scrub across the waveform to reveal sub-second heart beats and alerts</span>
+            </div>
+            <div class="chart-legend-row">
+              <span class="legend-item"><span class="legend-color color-minute-line"></span> Average BPM</span>
+              <span class="legend-item"><span class="legend-color color-minute-band"></span> Min-Max Range</span>
+              <span class="legend-item"><span class="legend-color color-dot-high"></span> High HR Spike</span>
+              <span class="legend-item"><span class="legend-color color-dot-low"></span> Low HR Dip</span>
+            </div>
+          </div>
+          <div class="chart-canvas-wrapper" style="height: 350px;">
+            <canvas id="canvas-minute-trace"></canvas>
+          </div>
+        </div>
+
+        <!-- Minute Data Table & Sensor Inspector -->
+        <div class="card-surface">
+          <div class="card-header-bar">
+            <div>
+              <h3 class="card-title">Minute Telemetry Log</h3>
+              <span class="card-subtitle">Click any minute row to reveal high-resolution sensor recordings</span>
+            </div>
+            <div class="table-filter-pills">
+              <button class="filter-pill active" id="btn-filter-all-mins">All Minutes (60)</button>
+              <button class="filter-pill" id="btn-filter-flagged-mins">Flagged Only</button>
+              <button class="filter-pill" id="btn-filter-high-mins">High &gt; <span class="btn-thresh-high">100</span></button>
+              <button class="filter-pill" id="btn-filter-low-mins">Low &lt; <span class="btn-thresh-low">60</span></button>
+            </div>
+          </div>
+          <div class="table-responsive-container">
+            <table class="telemetry-table" id="table-minute-telemetry">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Min BPM</th>
+                  <th>Avg BPM</th>
+                  <th>Max BPM</th>
+                  <th>Spread</th>
+                  <th>Readings</th>
+                  <th>Clinical Status</th>
+                  <th>Inspection</th>
+                </tr>
+              </thead>
+              <tbody id="minute-table-body">
+                <!-- Dynamically filled -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- SLIDING DRAWER: FLAGGED ANOMALIES INSPECTOR -->
+    <!-- ========================================================================= -->
+    <div class="drawer-overlay" id="drawer-overlay" style="display: none;"></div>
+    <aside class="side-drawer" id="side-drawer-anomalies" aria-hidden="true">
+      <div class="drawer-header">
+        <div class="drawer-title-group">
+          <div class="drawer-icon-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>
+          </div>
+          <div>
+            <h3 class="drawer-title">Flagged Heart Rate Episodes</h3>
+            <span class="drawer-subtitle" id="drawer-scope-label">Current Month Detected Events</span>
+          </div>
+        </div>
+        <button class="drawer-close-btn" id="btn-close-drawer" aria-label="Close drawer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="drawer-filter-bar">
+        <button class="filter-tab active" id="tab-anom-all">All (<span id="count-anom-all">0</span>)</button>
+        <button class="filter-tab tab-high" id="tab-anom-high">High HR (<span id="count-anom-high">0</span>)</button>
+        <button class="filter-tab tab-low" id="tab-anom-low">Low HR (<span id="count-anom-low">0</span>)</button>
+      </div>
+
+      <div class="drawer-content" id="anomalies-list-container">
+        <!-- List of flagged events with 1-click jump button -->
+      </div>
+    </aside>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: THRESHOLDS & CLINICAL SCREENING CONFIGURATION -->
+    <!-- ========================================================================= -->
+    <div class="modal-overlay" id="modal-thresholds" style="display: none;">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-thresh-title">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="modal-icon-badge">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </div>
+            <div>
+              <h3 class="modal-title" id="modal-thresh-title">Heart Rate Flagging Thresholds</h3>
+              <p class="modal-subtitle">Customize low and high heart rate detection boundaries.</p>
+            </div>
+          </div>
+          <button class="modal-close-btn" id="btn-close-thresholds-modal" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Presets -->
+          <div class="preset-section">
+            <span class="input-section-label">Quick Clinical Presets:</span>
+            <div class="preset-buttons-row">
+              <button class="preset-btn active" id="preset-standard" data-low="60" data-high="100">
+                <span class="preset-title">Standard Adult</span>
+                <span class="preset-desc">60 – 100 BPM</span>
+              </button>
+              <button class="preset-btn" id="preset-athlete" data-low="50" data-high="100">
+                <span class="preset-title">Endurance Athlete</span>
+                <span class="preset-desc">50 – 100 BPM</span>
+              </button>
+              <button class="preset-btn" id="preset-strict" data-low="60" data-high="90">
+                <span class="preset-title">Strict Resting</span>
+                <span class="preset-desc">60 – 90 BPM</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Low Threshold Slider -->
+          <div class="slider-control-card border-low">
+            <div class="slider-header">
+              <div class="slider-label-wrap">
+                <span class="dot-indicator dot-low"></span>
+                <span class="slider-title">Low Heart Rate (Bradycardia)</span>
+              </div>
+              <div class="slider-num-box">
+                <input type="number" id="input-low-thresh" min="35" max="80" value="60">
+                <span class="num-unit">BPM</span>
+              </div>
+            </div>
+            <input type="range" class="range-slider slider-cyan" id="range-low-thresh" min="35" max="80" value="60">
+            <div class="slider-range-labels">
+              <span>35 BPM</span>
+              <span>Default: 60 BPM</span>
+              <span>80 BPM</span>
+            </div>
+            <p class="slider-hint">Any readings falling below this boundary are flagged with icy cyan alert tags.</p>
+          </div>
+
+          <!-- High Threshold Slider -->
+          <div class="slider-control-card border-high">
+            <div class="slider-header">
+              <div class="slider-label-wrap">
+                <span class="dot-indicator dot-high"></span>
+                <span class="slider-title">High Heart Rate (Tachycardia)</span>
+              </div>
+              <div class="slider-num-box">
+                <input type="number" id="input-high-thresh" min="80" max="180" value="100">
+                <span class="num-unit">BPM</span>
+              </div>
+            </div>
+            <input type="range" class="range-slider slider-rose" id="range-high-thresh" min="80" max="180" value="100">
+            <div class="slider-range-labels">
+              <span>80 BPM</span>
+              <span>Default: 100 BPM</span>
+              <span>180 BPM</span>
+            </div>
+            <p class="slider-hint">Any readings surging above this boundary are flagged with coral red alert tags.</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" id="btn-reset-thresholds">Reset to Defaults</button>
+          <button class="btn-primary" id="btn-apply-thresholds">Apply Thresholds</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- SENSOR RAW SAMPLES MODAL (SUB-MINUTE INSPECTION) -->
+    <!-- ========================================================================= -->
+    <div class="modal-overlay" id="modal-sensor-samples" style="display: none;">
+      <div class="modal-card wide-card" role="dialog" aria-modal="true" aria-labelledby="modal-samples-title">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="modal-icon-badge icon-avg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+              <h3 class="modal-title" id="modal-samples-title">Sub-Minute Sensor Telemetry</h3>
+              <p class="modal-subtitle" id="modal-samples-subtitle">Timestamped beat-by-beat recordings</p>
+            </div>
+          </div>
+          <button class="modal-close-btn" id="btn-close-samples-modal" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="sensor-samples-grid" id="sensor-samples-list">
+            <!-- Sample cards -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Global Custom Tooltip -->
+    <div class="chart-tooltip" id="chart-floating-tooltip" style="display: none;"></div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <div class="footer-left">
+          <span>CardioPulse Analytics &bull; 69 Daily Data Files Analyzed &bull; ~2.5 Million Monitored Beats</span>
+        </div>
+        <div class="footer-right">
+          <span class="status-indicator-dot"></span> <span>Engine Operational</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
